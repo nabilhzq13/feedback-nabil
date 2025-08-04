@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Trip Feedback</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* The main content area will be scrollable */
+        .main-content {
+            height: 100vh;
+            overflow-y: auto;
+        }
+        /* Sidebar transition for mobile */
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        /* Hide scrollbar for main content, but still allow scrolling */
+        .main-content::-webkit-scrollbar {
+            display: none;
+        }
+        .main-content {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: block;
+        }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s, color 0.2s;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .nav-link.active {
+            background-color: #4F46E5; /* Indigo 600 */
+            color: white;
+        }
+        .nav-link:not(.active):hover {
+            background-color: #374151; /* Gray 700 */
+        }
+        /* Modal animation */
+        #reportModalContent.scale-100 {
+            transform: scale(1);
+            opacity: 1;
+        }
+        #reportModalContent.scale-90 {
+            transform: scale(0.9);
+            opacity: 0;
+        }
+        #reportModalContent {
+            transition: transform 0.3s cubic-bezier(.4,0,.2,1), opacity 0.3s cubic-bezier(.4,0,.2,1);
+        }
+        /* Progress bar animation */
+        .progress-bar {
+            transition: width 0.8s ease-in-out;
+        }
+        /* Card animation on load */
+        .animated-card {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInSlideUp 0.5s ease-out forwards;
+        }
+        @keyframes fadeInSlideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- LOGIN FORM -->
+    <div id="login-container" class="min-h-screen flex items-center justify-center bg-gray-100" style="display:none;">
+        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Admin Login</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="loginUsername" class="block text-gray-700 text-sm font-bold mb-2">Username</label>
+                    <input type="text" id="loginUsername" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="loginPassword" class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                    <input type="password" id="loginPassword" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200">Login</button>
+            </form>
+            <div id="login-message" class="mt-4 text-red-600 font-medium text-center"></div>
+        </div>
+    </div>
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="relative min-h-screen md:flex" style="display:none;">
+        <div class="relative min-h-screen md:flex">
+            <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden" style="display: none;"></div>
+
+            <aside id="sidebar" class="sidebar bg-gray-800 text-gray-300 w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 z-30">
+                <div class="px-4 pb-4 border-b border-gray-700">
+                    <h1 class="text-2xl font-bold text-white">Admin Panel</h1>
+                    <p class="text-sm text-gray-400 mt-1">Trip Feedback</p>
+                </div>
+                
+                <nav>
+                    <a class="nav-link" data-view="home">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        Home
+                    </a>
+                    <a class="nav-link active" data-view="feedbacks">
+                         <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                        Feedbacks
+                    </a>
+                    <a class="nav-link" data-view="statistics">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        Statistics
+                    </a>
+                    <a class="nav-link" data-view="profile">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        Profile
+                    </a>
+                </nav>
+            </aside>
+
+            <main class="flex-1 main-content">
+                <header class="bg-white shadow-sm p-4 flex justify-between items-center">
+                    <button id="menu-btn" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <h2 id="page-title" class="text-2xl font-bold text-gray-800">Customer Feedbacks</h2>
+                    <div class="w-6"></div> </header>
+
+                <div class="p-4 md:p-8">
+                    <!-- HOME VIEW -->
+                    <div id="home-view" class="view">
+                        <div class="bg-white p-8 rounded-xl shadow-lg text-center mb-6 animated-card">
+                            <h2 class="text-4xl font-bold text-gray-800 mb-4">Welcome, Admin!</h2>
+                            <p class="text-gray-600 text-lg">Here's a quick overview of your trip feedback data.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                            <div class="bg-white p-6 rounded-xl shadow-md animated-card" style="animation-delay: 0.1s;">
+                                <div class="flex items-center">
+                                    <div class="p-3 bg-indigo-100 rounded-full mr-4">
+                                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500 font-medium">Total Feedbacks</p>
+                                        <p id="total-feedbacks" class="text-3xl font-bold text-gray-900 mt-1">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-md animated-card" style="animation-delay: 0.2s;">
+                                <div class="flex items-center">
+                                    <div class="p-3 bg-green-100 rounded-full mr-4">
+                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500 font-medium">Positive Rating</p>
+                                        <p id="positive-feedbacks" class="text-3xl font-bold text-gray-900 mt-1">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-md animated-card" style="animation-delay: 0.3s;">
+                                <div class="flex items-center">
+                                    <div class="p-3 bg-yellow-100 rounded-full mr-4">
+                                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500 font-medium">Neutral Rating</p>
+                                        <p id="neutral-feedbacks" class="text-3xl font-bold text-gray-900 mt-1">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-md animated-card" style="animation-delay: 0.4s;">
+                                <div class="flex items-center">
+                                    <div class="p-3 bg-red-100 rounded-full mr-4">
+                                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500 font-medium">Negative Rating</p>
+                                        <p id="negative-feedbacks" class="text-3xl font-bold text-gray-900 mt-1">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- New Section for Recent Feedbacks -->
+                        <div class="bg-white p-6 rounded-xl shadow-md animated-card" style="animation-delay: 0.5s;">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-semibold text-gray-700">Recent Feedbacks</h4>
+                                <a href="#" id="view-all-feedbacks" class="text-sm text-indigo-600 hover:text-indigo-800 transition-colors duration-200">View All</a>
+                            </div>
+                            <div id="recent-feedbacks-list" class="space-y-4">
+                                <!-- Recent feedback items will be dynamically added here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FEEDBACKS VIEW -->
+                    <div id="feedbacks-view" class="view active">
+                        <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-2xl font-semibold text-gray-800">Feedback List</h3>
+                                <div id="sort-buttons" class="ml-4 flex gap-2">
+                                    <button id="sort-date" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-3 rounded-lg shadow-sm text-sm transition-colors duration-200">Sort by Date</button>
+                                    <button id="sort-rating" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-3 rounded-lg shadow-sm text-sm transition-colors duration-200">Sort by Rating</button>
+                                    <button id="clear-sort" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-1 px-3 rounded-lg shadow-sm text-sm transition-colors duration-200">Clear Sort</button>
+                                </div>
+                            </div>
+                            <button id="open-report-modal" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                                <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                                Generate Report
+                            </button>
+                        </div>
+                        <div id="feedbacks-list" class="space-y-4">
+                            <!-- Feedback items will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- STATISTICS VIEW -->
+                    <div id="statistics-view" class="view">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-6">Detailed Feedback Analytics</h3>
+                        <div id="no-data-message" class="text-center text-gray-500 font-medium py-10" style="display: none;">
+                            No feedback data available to display statistics.
+                        </div>
+                        
+                        <div id="statistics-content">
+                            <div class="bg-white p-6 rounded-xl shadow-md mb-8 animated-card">
+                                <h4 class="text-lg font-semibold text-gray-700 mb-4">Overall Rating Summary</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center text-sm font-medium">
+                                            <span>Positive</span>
+                                            <span id="positive-percent" class="text-green-600">0%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div id="positive-bar" class="bg-green-600 h-2.5 rounded-full progress-bar" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center text-sm font-medium">
+                                            <span>Neutral</span>
+                                            <span id="neutral-percent" class="text-yellow-500">0%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div id="neutral-bar" class="bg-yellow-500 h-2.5 rounded-full progress-bar" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center text-sm font-medium">
+                                            <span>Negative</span>
+                                            <span id="negative-percent" class="text-red-500">0%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div id="negative-bar" class="bg-red-500 h-2.5 rounded-full progress-bar" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="bg-white p-6 rounded-xl shadow-md animated-card" style="animation-delay: 0.2s;">
+                                    <h4 class="text-lg font-semibold text-gray-700 mb-4">Ratings Distribution</h4>
+                                    <div class="h-64">
+                                        <canvas id="ratingsChart"></canvas>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-6 rounded-xl shadow-md animated-card" style="animation-delay: 0.3s;">
+                                    <h4 class="text-lg font-semibold text-gray-700 mb-4">Customer Type Breakdown</h4>
+                                    <div class="h-64">
+                                        <canvas id="customerTypeChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white p-6 rounded-xl shadow-md mt-8 animated-card" style="animation-delay: 0.4s;">
+                                <h4 class="text-lg font-semibold text-gray-700 mb-4">Top 5 Countries</h4>
+                                <div class="h-64">
+                                    <canvas id="countryChart"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-xl shadow-md mt-8 animated-card" style="animation-delay: 0.5s;">
+                                <h4 class="text-lg font-semibold text-gray-700 mb-4">Most Mentioned Best Places</h4>
+                                <ul id="best-places-list" class="space-y-2">
+                                    <!-- List items will be populated by JS -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- PROFILE VIEW -->
+                    <div id="profile-view" class="view">
+                        <div class="bg-white p-8 rounded-xl shadow-lg animated-card">
+                            <h3 class="text-2xl font-semibold text-gray-800 mb-4">Admin Profile</h3>
+                            <form id="profileForm">
+                                <div class="mb-4">
+                                    <label for="profileUsername" class="block text-gray-700 font-medium mb-2">Username</label>
+                                    <input type="text" id="profileUsername" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" readonly>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="profilePassword" class="block text-gray-700 font-medium mb-2">Change Password</label>
+                                    <input type="password" id="profilePassword" class="w-full px-4 py-2 text-gray-700 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <p class="text-sm text-gray-500 mt-1">Leave blank to keep current password.</p>
+                                </div>
+                                <div class="flex justify-between items-center gap-2">
+                                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200">Update Profile</button>
+                                    <button type="button" id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200">Log Out</button>
+                                </div>
+                            </form>
+                            <div id="profile-message" class="mt-4 text-green-600 font-medium text-center"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Report Modal -->
+    <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40 hidden">
+        <div id="reportModalContent" class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl scale-90">
+            <div class="flex justify-between items-center pb-4 border-b border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-800">Generated Report</h3>
+                <button id="close-report-modal" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">&times;</button>
+            </div>
+            <div id="report-content" class="py-6 max-h-[70vh] overflow-y-auto">
+                <!-- Report content will be injected here -->
+            </div>
+            <div class="flex justify-end pt-4 border-t border-gray-200">
+                <button id="copy-report" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const menuBtn = document.getElementById('menu-btn');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const views = document.querySelectorAll('.view');
+            const pageTitle = document.getElementById('page-title');
+            const feedbacksList = document.getElementById('feedbacks-list');
+            const recentFeedbacksList = document.getElementById('recent-feedbacks-list');
+            const profileForm = document.getElementById('profileForm');
+            const profileMessage = document.getElementById('profile-message');
+            const openReportModalBtn = document.getElementById('open-report-modal');
+            const closeReportModalBtn = document.getElementById('close-report-modal');
+            const reportModal = document.getElementById('reportModal');
+            const reportModalContent = document.getElementById('reportModalContent');
+            const reportContent = document.getElementById('report-content');
+            const copyReportBtn = document.getElementById('copy-report');
+
+            // Toggle sidebar for mobile
+            menuBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+                sidebarOverlay.style.display = sidebar.classList.contains('-translate-x-full') ? 'none' : 'block';
+            });
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.style.display = 'none';
+            });
+
+            // View switching logic
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    // Update active nav link
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Hide all views and show the selected one
+                    const viewId = this.dataset.view + '-view';
+                    views.forEach(v => v.classList.remove('active'));
+                    document.getElementById(viewId).classList.add('active');
+                    
+                    // Update page title
+                    pageTitle.textContent = this.textContent.trim();
+
+                    // Hide sidebar on mobile after clicking a link
+                    sidebar.classList.add('-translate-x-full');
+                    sidebarOverlay.style.display = 'none';
+
+                    // Load content for the specific view
+                    if (this.dataset.view === 'feedbacks') {
+                        loadFeedbacks();
+                    } else if (this.dataset.view === 'home') {
+                        loadHomeStatistics();
+                    } else if (this.dataset.view === 'profile') {
+                        loadProfile();
+                    } else if (this.dataset.view === 'statistics') {
+                        showStatistics();
+                    }
+                });
+            });
+
+            // Functions to handle views
+            let feedbackSortState = { type: null, asc: true };
+            function loadFeedbacks() {
+                let feedbacks = JSON.parse(localStorage.getItem('tripFeedbacks')) || [];
+                // Apply sorting if needed
+                if (feedbackSortState.type === 'date') {
+                    feedbacks = feedbacks.slice().sort((a, b) => feedbackSortState.asc ? new Date(a.timestamp) - new Date(b.timestamp) : new Date(b.timestamp) - new Date(a.timestamp));
+                } else if (feedbackSortState.type === 'rating') {
+                    const ratingOrder = ['Excellent', 'Very Good', 'Good', 'Fair', 'Poor'];
+                    feedbacks = feedbacks.slice().sort((a, b) => {
+                        const diff = ratingOrder.indexOf(a.rating) - ratingOrder.indexOf(b.rating);
+                        return feedbackSortState.asc ? diff : -diff;
+                    });
+                }
+                feedbacksList.innerHTML = '';
+                if (feedbacks.length === 0) {
+                    feedbacksList.innerHTML = '<p class="text-center text-gray-500 font-medium">No feedbacks submitted yet.</p>';
+                } else {
+                    feedbacks.forEach(feedback => {
+                        const feedbackItem = createFeedbackListItem(feedback);
+                        feedbacksList.appendChild(feedbackItem);
+                    });
+                }
+                setupSortButtons();
+            }
+
+            function setupSortButtons() {
+                const sortDateBtn = document.getElementById('sort-date');
+                const sortRatingBtn = document.getElementById('sort-rating');
+                const clearSortBtn = document.getElementById('clear-sort');
+                if (sortDateBtn && sortRatingBtn && clearSortBtn) {
+                    sortDateBtn.onclick = function() {
+                        // Toggle ascending/descending
+                        if (feedbackSortState.type === 'date') {
+                            feedbackSortState.asc = !feedbackSortState.asc;
+                        } else {
+                            feedbackSortState.type = 'date';
+                            feedbackSortState.asc = false;
+                        }
+                        loadFeedbacks();
+                    };
+                    sortRatingBtn.onclick = function() {
+                        if (feedbackSortState.type === 'rating') {
+                            feedbackSortState.asc = !feedbackSortState.asc;
+                        } else {
+                            feedbackSortState.type = 'rating';
+                            feedbackSortState.asc = true;
+                        }
+                        loadFeedbacks();
+                    };
+                    clearSortBtn.onclick = function() {
+                        feedbackSortState.type = null;
+                        feedbackSortState.asc = true;
+                        loadFeedbacks();
+                    };
+                }
+            }
+            
+            function createFeedbackListItem(feedback) {
+                const feedbackItem = document.createElement('div');
+                feedbackItem.className = 'bg-white p-6 rounded-xl shadow-md border border-gray-200';
+                // Format date as dd/mm/yyyy
+                function formatDate(dateStr) {
+                    const d = new Date(dateStr);
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    return `${day}/${month}/${year}`;
+                }
+                feedbackItem.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="px-3 py-1 text-sm font-bold text-white rounded-full 
+                                ${feedback.rating === 'Excellent' || feedback.rating === 'Very Good' ? 'bg-green-500' :
+                                feedback.rating === 'Good' ? 'bg-yellow-500' : 'bg-red-500'}">
+                                ${feedback.rating}
+                            </span>
+                            <p class="text-sm text-gray-500 mt-1">${formatDate(feedback.timestamp)}</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="view-details-btn text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200" data-id="${feedback.id}">View Details</button>
+                            <button class="delete-btn text-red-600 hover:text-red-800 font-medium transition-colors duration-200" data-id="${feedback.id}">Delete</button>
+                        </div>
+                    </div>
+                    <p class="text-gray-700 mt-3">${feedback.comments || 'No comments provided.'}</p>
+                `;
+                // Add event listeners directly to the buttons in the newly created element
+                feedbackItem.querySelector('.view-details-btn').addEventListener('click', (e) => {
+                    const id = e.target.dataset.id;
+                    const feedbacks = JSON.parse(localStorage.getItem('tripFeedbacks')) || [];
+                    const feedback = feedbacks.find(f => f.id === id);
+                    if (feedback) {
+                        showReportModal(feedback);
+                    }
+                });
+                feedbackItem.querySelector('.delete-btn').addEventListener('click', (e) => {
+                    const id = e.target.dataset.id;
+                    if (confirm('Are you sure you want to delete this feedback?')) {
+                        deleteFeedback(id);
+                    }
+                });
+                return feedbackItem;
+            }
+
+            function deleteFeedback(id) {
+                let feedbacks = JSON.parse(localStorage.getItem('tripFeedbacks')) || [];
+                const updatedFeedbacks = feedbacks.filter(f => f.id !== id);
+                localStorage.setItem('tripFeedbacks', JSON.stringify(updatedFeedbacks));
+                loadFeedbacks();
+                loadHomeStatistics();
+                showStatistics();
+            }
+
+            function loadHomeStatistics() {
+                const feedbacks = JSON.parse(localStorage.getItem('tripFeedbacks')) || [];
+                const total = feedbacks.length;
+                let positive = 0;
+                let neutral = 0;
+                let negative = 0;
+                
+                feedbacks.forEach(f => {
+                    if (f.rating === 'Excellent' || f.rating === 'Very Good') {
+                        positive++;
+                    } else if (f.rating === 'Good') {
+                        neutral++;
+                    } else {
+                        negative++;
+                    }
+                });
+
+                document.getElementById('total-feedbacks').textContent = total;
+                document.getElementById('positive-feedbacks').textContent = positive;
+                document.getElementById('neutral-feedbacks').textContent = neutral;
+                document.getElementById('negative-feedbacks').textContent = negative;
+
+                // Load recent feedbacks for the home view
+                recentFeedbacksList.innerHTML = '';
+                const recentFeedbacks = feedbacks.slice(-3).reverse(); // Get last 3 and reverse to show most recent first
+                function formatDate(dateStr) {
+                    const d = new Date(dateStr);
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    return `${day}/${month}/${year}`;
+                }
+                if (recentFeedbacks.length > 0) {
+                    recentFeedbacks.forEach(feedback => {
+                        const recentItem = document.createElement('div');
+                        recentItem.className = 'bg-gray-50 p-4 rounded-lg shadow-sm animated-card';
+                        recentItem.innerHTML = `
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="px-2 py-0.5 text-xs font-bold text-white rounded-full 
+                                    ${feedback.rating === 'Excellent' || feedback.rating === 'Very Good' ? 'bg-green-500' :
+                                    feedback.rating === 'Good' ? 'bg-yellow-500' : 'bg-red-500'}">
+                                    ${feedback.rating}
+                                </span>
+                                <p class="text-sm text-gray-500">${formatDate(feedback.timestamp)}</p>
+                            </div>
+                            <p class="text-gray-700 text-sm italic">${feedback.comments ? feedback.comments.substring(0, 70) + '...' : 'No comments.'}</p>
+                        `;
+                        recentFeedbacksList.appendChild(recentItem);
+                    });
+                } else {
+                    recentFeedbacksList.innerHTML = '<p class="text-center text-gray-500 font-medium">No recent feedbacks to display.</p>';
+                }
+            }
+
+            // New function to display detailed statistics
+            let ratingsChart, customerTypeChart, countryChart;
+            function showStatistics() {
+                const feedbacks = JSON.parse(localStorage.getItem('tripFeedbacks')) || [];
+                const statisticsContainer = document.getElementById('statistics-content');
+                const noDataMessage = document.getElementById('no-data-message');
+                
+                if (feedbacks.length === 0) {
+                    statisticsContainer.style.display = 'none';
+                    noDataMessage.style.display = 'block';
+                    return;
+                } else {
+                    statisticsContainer.style.display = 'grid';
+                    noDataMessage.style.display = 'none';
+                }
+
+                // Calculate data for charts and progress bars
+                const ratings = { 'Excellent': 0, 'Very Good': 0, 'Good': 0, 'Fair': 0, 'Poor': 0 };
+                const customerTypes = {};
+                const countries = {};
+                const bestPlaces = {};
+
+                let positiveCount = 0;
+                let neutralCount = 0;
+                let negativeCount = 0;
+
+                feedbacks.forEach(f => {
+                    // Ratings distribution
+                    ratings[f.rating]++;
+                    
+                    // Positive/Neutral/Negative counts
+                    if (f.rating === 'Excellent' || f.rating === 'Very Good') {
+                        positiveCount++;
+                    } else if (f.rating === 'Good') {
+                        neutralCount++;
+                    } else {
+                        negativeCount++;
+                    }
+
+                    // Customer type distribution
+                    customerTypes[f.customerType] = (customerTypes[f.customerType] || 0) + 1;
+
+                    // Country distribution
+                    countries[f.country] = (countries[f.country] || 0) + 1;
+
+                    // Best places
+                    if (f.bestPlace) {
+                        const places = f.bestPlace.split(',').map(p => p.trim());
+                        places.forEach(p => {
+                            if (p !== '') {
+                                bestPlaces[p] = (bestPlaces[p] || 0) + 1;
+                            }
+                        });
+                    }
+                });
+                
+                const totalFeedbacks = feedbacks.length;
+                const positivePercent = totalFeedbacks > 0 ? (positiveCount / totalFeedbacks) * 100 : 0;
+                const neutralPercent = totalFeedbacks > 0 ? (neutralCount / totalFeedbacks) * 100 : 0;
+                const negativePercent = totalFeedbacks > 0 ? (negativeCount / totalFeedbacks) * 100 : 0;
+
+                // Update progress bars
+                document.getElementById('positive-percent').textContent = `${positivePercent.toFixed(1)}%`;
+                document.getElementById('neutral-percent').textContent = `${neutralPercent.toFixed(1)}%`;
+                document.getElementById('negative-percent').textContent = `${negativePercent.toFixed(1)}%`;
+                document.getElementById('positive-bar').style.width = `${positivePercent}%`;
+                document.getElementById('neutral-bar').style.width = `${neutralPercent}%`;
+                document.getElementById('negative-bar').style.width = `${negativePercent}%`;
+                
+                // Render Ratings Distribution Chart
+                const ratingsCtx = document.getElementById('ratingsChart').getContext('2d');
+                if (ratingsChart) ratingsChart.destroy();
+                ratingsChart = new Chart(ratingsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(ratings),
+                        datasets: [{
+                            label: '# of Feedbacks',
+                            data: Object.values(ratings),
+                            backgroundColor: [
+                                '#10B981', '#34D399', '#FCD34D', '#FBBF24', '#EF4444'
+                            ],
+                            borderColor: [
+                                '#047857', '#065F46', '#B45309', '#92400E', '#B91C1C'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 1000 },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Ratings'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+                
+                // Render Customer Type Breakdown Chart
+                const customerTypeCtx = document.getElementById('customerTypeChart').getContext('2d');
+                if (customerTypeChart) customerTypeChart.destroy();
+                customerTypeChart = new Chart(customerTypeCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(customerTypes),
+                        datasets: [{
+                            data: Object.values(customerTypes),
+                            backgroundColor: [
+                                '#6366F1', '#3B82F6', '#22C55E', '#F97316', '#A855F7'
+                            ],
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 1000 },
+                        plugins: {
+                            legend: { position: 'right' }
+                        }
+                    }
+                });
+
+                // Render Top Countries Chart
+                const countryCtx = document.getElementById('countryChart').getContext('2d');
+                if (countryChart) countryChart.destroy();
+                
+                // Sort countries by count and get the top 5
+                const sortedCountries = Object.entries(countries).sort(([,a],[,b]) => b-a).slice(0, 5);
+                const topCountryLabels = sortedCountries.map(([country]) => country);
+                const topCountryData = sortedCountries.map(([,count]) => count);
+
+                countryChart = new Chart(countryCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: topCountryLabels,
+                        datasets: [{
+                            label: 'Number of Feedbacks',
+                            data: topCountryData,
+                            backgroundColor: '#0EA5E9',
+                            borderColor: '#0284C7',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y', // Make it a horizontal bar chart
+                        animation: { duration: 1000 },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Feedbacks'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+
+                // Render Most Mentioned Best Places List
+                const bestPlacesList = document.getElementById('best-places-list');
+                bestPlacesList.innerHTML = '';
+                
+                // Sort places by count and get the top 5
+                const sortedPlaces = Object.entries(bestPlaces).sort(([,a],[,b]) => b-a).slice(0, 5);
+                
+                if (sortedPlaces.length === 0) {
+                    bestPlacesList.innerHTML = '<li class="text-gray-500 text-sm">No places mentioned yet.</li>';
+                } else {
+                    sortedPlaces.forEach(([place, count], index) => {
+                        const li = document.createElement('li');
+                        li.className = 'flex justify-between items-center px-4 py-2 bg-gray-50 rounded-lg shadow-sm';
+                        li.innerHTML = `
+                            <span class="font-medium text-gray-700">${place}</span>
+                            <span class="text-sm font-bold text-indigo-600">${count}</span>
+                        `;
+                        bestPlacesList.appendChild(li);
+                    });
+                }
+
+                // Add animation to the cards
+                document.querySelectorAll('#statistics-content .animated-card').forEach((card, index) => {
+                    card.style.animationDelay = `${index * 0.15}s`;
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, index * 150 + 10);
+                });
+            }
+
+            function loadProfile() {
+                const profile = JSON.parse(localStorage.getItem('adminProfile')) || { username: 'admin', password: '' };
+                document.getElementById('profileUsername').value = profile.username;
+                document.getElementById('profilePassword').value = '';
+            }
+
+            profileForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const username = document.getElementById('profileUsername').value;
+                const newPassword = document.getElementById('profilePassword').value;
+
+                let profile = JSON.parse(localStorage.getItem('adminProfile')) || { username: 'admin', password: '' };
+                profile.username = username;
+                if (newPassword) {
+                    profile.password = newPassword;
+                }
+                localStorage.setItem('adminProfile', JSON.stringify(profile));
+                profileMessage.textContent = 'Profile updated successfully!';
+                setTimeout(() => { profileMessage.textContent = ''; }, 3000);
+            });
+
+            // Logout button logic
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function() {
+                    localStorage.removeItem('adminAuthenticated');
+                    showLogin();
+                });
+            }
+
+            // Login logic
+            function isAuthenticated() {
+                return localStorage.getItem('adminAuthenticated') === 'true';
+            }
+            function authenticate(username, password) {
+                const profile = JSON.parse(localStorage.getItem('adminProfile')) || { username: 'admin', password: '' };
+                return username === profile.username && (profile.password === '' || password === profile.password);
+            }
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const username = document.getElementById('loginUsername').value;
+                const password = document.getElementById('loginPassword').value;
+                if (authenticate(username, password)) {
+                    localStorage.setItem('adminAuthenticated', 'true');
+                    showApp();
+                } else {
+                    document.getElementById('login-message').textContent = 'Invalid username or password.';
+                    setTimeout(() => { document.getElementById('login-message').textContent = ''; }, 3000);
+                }
+            });
+
+            // Modal logic
+            function showReportModal(feedback) {
+                reportModal.classList.remove('hidden');
+                reportModalContent.classList.remove('scale-90');
+                reportModalContent.classList.add('scale-100');
+                // If feedback is provided, show details for that feedback
+                if (feedback) {
+                    // Format date as dd/mm/yyyy
+                    function formatDate(dateStr) {
+                        const d = new Date(dateStr);
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        return `${day}/${month}/${year}`;
+                    }
+                    reportContent.innerHTML = `
+                        <div class="space-y-4 animate-fadeIn">
+                            <h4 class="text-xl font-bold text-indigo-700">Feedback Details</h4>
+                            <p><strong>Feedback ID:</strong> <span class="text-gray-600">${feedback.id}</span></p>
+                            <p><strong>Submitted On:</strong> <span class="text-gray-600">${formatDate(feedback.timestamp)}</span></p>
+                            <p><strong>Rating:</strong> <span class="px-2 py-1 text-xs font-bold text-white rounded-full 
+                                ${feedback.rating === 'Excellent' || feedback.rating === 'Very Good' ? 'bg-green-500' :
+                                feedback.rating === 'Good' ? 'bg-yellow-500' : 'bg-red-500'}">
+                                ${feedback.rating}
+                            </span></p>
+                            <p><strong>Traveler Type:</strong> <span class="text-gray-600">${feedback.customerType}</span></p>
+                            <p><strong>Country Visited:</strong> <span class="text-gray-600">${feedback.country}</span></p>
+                            <p><strong>Best Part of the Trip:</strong> <span class="text-gray-600">${feedback.bestPlace || 'Not specified.'}</span></p>
+                            <p><strong>Comments:</strong> <span class="text-gray-600">${feedback.comments || 'No comments provided.'}</span></p>
+                            ${feedback.image ? `
+                                <div>
+                                    <p class="font-semibold text-gray-700">Uploaded Image:</p>
+                                    <img src="${feedback.image}" alt="Feedback Image" class="mt-2 rounded-lg shadow-md w-full max-w-sm h-auto">
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    // Otherwise, show summary of all feedbacks (standalone report)
+                    const feedbacks = JSON.parse(localStorage.getItem('tripFeedbacks')) || [];
+                    const total = feedbacks.length;
+                    let positive = 0, neutral = 0, negative = 0;
+                    const ratingCount = { 'Excellent': 0, 'Very Good': 0, 'Good': 0, 'Fair': 0, 'Poor': 0 };
+                    const countryCount = {};
+                    const bestPlaces = {};
+                    feedbacks.forEach(f => {
+                        ratingCount[f.rating] = (ratingCount[f.rating] || 0) + 1;
+                        if (f.rating === 'Excellent' || f.rating === 'Very Good') positive++;
+                        else if (f.rating === 'Good') neutral++;
+                        else negative++;
+                        countryCount[f.country] = (countryCount[f.country] || 0) + 1;
+                        if (f.bestPlace) {
+                            f.bestPlace.split(',').map(p => p.trim()).forEach(p => {
+                                if (p) bestPlaces[p] = (bestPlaces[p] || 0) + 1;
+                            });
+                        }
+                    });
+                    // Top countries and places
+                    const topCountries = Object.entries(countryCount).sort(([,a],[,b]) => b-a).slice(0,3);
+                    const topPlaces = Object.entries(bestPlaces).sort(([,a],[,b]) => b-a).slice(0,3);
+
+                    // Animated summary UI
+                    reportContent.innerHTML = `
+                        <div class="space-y-6 animate-fadeIn">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-xl font-bold text-indigo-700">Trip Feedback Summary</h4>
+                                <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-semibold text-sm shadow">${total} Feedbacks</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-green-50 p-4 rounded-xl shadow-md flex flex-col items-center animated-card" style="animation-delay:0.1s;">
+                                    <span class="text-3xl font-bold text-green-600">${positive}</span>
+                                    <span class="text-sm text-green-700 mt-1">Positive</span>
+                                </div>
+                                <div class="bg-yellow-50 p-4 rounded-xl shadow-md flex flex-col items-center animated-card" style="animation-delay:0.2s;">
+                                    <span class="text-3xl font-bold text-yellow-600">${neutral}</span>
+                                    <span class="text-sm text-yellow-700 mt-1">Neutral</span>
+                                </div>
+                                <div class="bg-red-50 p-4 rounded-xl shadow-md flex flex-col items-center animated-card" style="animation-delay:0.3s;">
+                                    <span class="text-3xl font-bold text-red-600">${negative}</span>
+                                    <span class="text-sm text-red-700 mt-1">Negative</span>
+                                </div>
+                            </div>
+                            <div class="mt-6">
+                                <h5 class="text-lg font-semibold text-gray-700 mb-2">Ratings Breakdown</h5>
+                                <div class="flex flex-wrap gap-2">
+                                    ${Object.entries(ratingCount).map(([r, c]) => `<span class="px-3 py-1 rounded-full text-xs font-bold ${r==='Excellent'||r==='Very Good'?'bg-green-500 text-white':r==='Good'?'bg-yellow-500 text-white':'bg-red-500 text-white'} shadow">${r}: ${c}</span>`).join(' ')}
+                                </div>
+                            </div>
+                            <div class="mt-6">
+                                <h5 class="text-lg font-semibold text-gray-700 mb-2">Top Countries</h5>
+                                <ul class="list-disc pl-6 text-gray-600">
+                                    ${topCountries.length ? topCountries.map(([c, n]) => `<li class="animated-card" style="animation-delay:0.4s;">${c} <span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">${n}</span></li>`).join('') : '<li>No country data.</li>'}
+                                </ul>
+                            </div>
+                            <div class="mt-6">
+                                <h5 class="text-lg font-semibold text-gray-700 mb-2">Most Mentioned Best Places</h5>
+                                <ul class="list-disc pl-6 text-gray-600">
+                                    ${topPlaces.length ? topPlaces.map(([p, n]) => `<li class="animated-card" style="animation-delay:0.5s;">${p} <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold">${n}</span></li>`).join('') : '<li>No places mentioned.</li>'}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+                // Animate cards in modal
+                setTimeout(() => {
+                    document.querySelectorAll('#report-content .animated-card').forEach((card, idx) => {
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateY(20px)';
+                        setTimeout(() => {
+                            card.style.opacity = '1';
+                            card.style.transform = 'translateY(0)';
+                        }, idx * 120 + 10);
+                    });
+                }, 10);
+            }
+
+            function hideReportModal() {
+                reportModalContent.classList.remove('scale-100');
+                reportModalContent.classList.add('scale-90');
+                setTimeout(() => {
+                    reportModal.classList.add('hidden');
+                    reportContent.innerHTML = '';
+                }, 300);
+            }
+
+            openReportModalBtn.addEventListener('click', () => {
+                const feedbacks = JSON.parse(localStorage.getItem('tripFeedbacks')) || [];
+                if (feedbacks.length > 0) {
+                    showReportModal(); // Show summary modal for all feedbacks
+                } else {
+                    alert('No feedback data to generate a report.');
+                }
+            });
+
+            closeReportModalBtn.addEventListener('click', hideReportModal);
+            reportModal.addEventListener('click', (e) => {
+                if (e.target === reportModal) {
+                    hideReportModal();
+                }
+            });
+            copyReportBtn.addEventListener('click', () => {
+                const reportText = reportContent.innerText;
+                const el = document.createElement('textarea');
+                el.value = reportText;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                
+                const originalText = copyReportBtn.textContent;
+                copyReportBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyReportBtn.textContent = originalText;
+                }, 2000);
+            });
+
+            // Add event listener for 'View All' in recent feedbacks
+            const viewAllFeedbacksBtn = document.getElementById('view-all-feedbacks');
+            if (viewAllFeedbacksBtn) {
+                viewAllFeedbacksBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // Switch to feedbacks view
+                    navLinks.forEach(link => {
+                        if (link.dataset.view === 'feedbacks') {
+                            link.classList.add('active');
+                            pageTitle.textContent = link.textContent.trim();
+                        } else {
+                            link.classList.remove('active');
+                        }
+                    });
+                    views.forEach(v => v.classList.remove('active'));
+                    document.getElementById('feedbacks-view').classList.add('active');
+                    loadFeedbacks();
+                });
+            }
+
+            function showLogin() {
+                document.getElementById('login-container').style.display = 'flex';
+                document.getElementById('app-container').style.display = 'none';
+            }
+
+            function showApp() {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
+            }
+
+            // Initial auth check and setup
+            if (isAuthenticated()) {
+                showApp();
+                loadHomeStatistics();
+                loadFeedbacks(); // Load the default view
+                // Set the default active link and page title
+                navLinks.forEach(link => {
+                    if (link.dataset.view === 'feedbacks') {
+                        link.classList.add('active');
+                        pageTitle.textContent = link.textContent.trim();
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+                
+            } else {
+                showLogin();
+            }
+        });
+    </script>
+</body>
+</html>
